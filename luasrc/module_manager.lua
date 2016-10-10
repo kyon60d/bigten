@@ -1,49 +1,37 @@
 
-local mmgr = {}
-local lmgr = {}
+local MM = {}
 
-function mmgr.GetModule(moduleName)
-	return lmgr[moduleName]
+function MM.InitModule(config)
+    for k,v in pairs(config) do
+        local mod = require(v)
+        MM[mod.Name] = mod
+    end
+    for k,v in pairs(MM) do
+        if type(v) == "table" and type(v.Import) == "table" then
+            local im = v.Import
+            for k,v in pairs(im) do
+                im[k] = MM[v]-- 对于每个module执行此代码后v的值就改变了，不能再次执行
+            end
+        end
+    end
+    MM.InitData()
+    MM.ClearData()
 end
 
-function mmgr.InitModule(config)
-	for k,v in pairs(config) do
-		local mod = require(v)
-		lmgr[mod.GetModuleName()] = mod
-	end
-	for k,v in pairs(lmgr) do
-		if type(v) == "table" and type(v.GetImportModule) == "function" then
-			local im = v.GetImportModule()
-			for k,v in pairs(im) do
-				im[k] = lmgr[v]-- 对于每个module执行此代码后v的值就改变了，不能再次执行
-			end
-		end
-	end
-	mmgr.InitData()
-	mmgr.ClearData()
+function MM.InitData()
+    MM.ExecuteInterface("InitData")
 end
 
-function mmgr.InitData()
-	mmgr.ExecuteInterface("InitData")
+function MM.ClearData()
+    MM.ExecuteInterface("ClearData")
 end
 
-function mmgr.ClearData()
-	mmgr.ExecuteInterface("ClearData")
+function MM.ExecuteInterface(iName)
+    for k,v in pairs(MM) do
+        if type(v) == "table" and type(v[iName]) == "function" then
+            v[iName]()
+        end
+    end
 end
 
-function mmgr.ExecuteInterface(iName)
-	for k,v in pairs(lmgr) do
-		if type(v) == "table" and type(v[iName]) == "function" then
-			v[iName]()
-		end
-	end
-end
-
-return mmgr
-
--- 返回一个函数
--- local Mgr = require "module_manager"
--- local mmgr = Mgr(require "module_config")
-
--- 安全执行
--- mmgr.ExecuteSafe("Ci","Check")
+return MM
